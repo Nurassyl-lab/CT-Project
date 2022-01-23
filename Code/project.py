@@ -11,32 +11,50 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from scipy.fft import fft, fftfreq
+import math
 
-f = open("SeriesDataRecording.txt", "r")
+
+name = "sin400Hz.txt"
+f = open(name, "r")
 arr = []
 for line in f:
     arr.append(int(line))
 
-length = len(arr)
-sampleRate = 2378
+sampleRate = 2379
 
+duration = int(math.floor(len(arr)) / sampleRate)#calculate duration in seconds
+
+d = sampleRate * duration#d represents number of samples that perfectly correspond to duration
+                        #because I physically cannot record exact time in integer seconds
+                        #time will be always (for example 20.1 sec or 15.7 sec)
+                        #since it is not an integer it will always add some extra value 
+                        #d helps to set a range optimal for an integer duration
+
+arr = arr[0:d]#modify data 
+time = np.linspace(0, duration, d)#create time array for plotting
+
+length = len(arr)
 if length < 400:
     print("DATA TOO SMALL")
     sys.exit(1)
 
 fig1 = plt.figure(1)
-plt.title("Full data")
-plt.plot(arr)
+title = name + " | Full data"
+plt.title(title)
+plt.plot(time, arr)
 plt.ylabel("analog signal (analogRead())")
-plt.xlabel("number of data")
-fig1.savefig("FullData.png", dpi = fig1.dpi)
+plt.xlabel("time(sec)")
+title+=".png"
+fig1.savefig(title, dpi = fig1.dpi)
 
 fig2 = plt.figure(2)
-plt.title("Full data (small range)")
+title = name + " | Full data (small range)"
+plt.title(title)
 plt.ylabel("analog signal (analogRead())")
-plt.xlabel("number of data")
-plt.plot(arr[int(length/2):int(length/2)+100])
-fig2.savefig("Zoomed.png", dpi = fig2.dpi)
+plt.xlabel("time(sec)")
+plt.plot(time[int(length/2):int(length/2)+100],arr[int(length/2):int(length/2)+100])
+title += "_ZOOMED.png"
+fig2.savefig(title, dpi = fig2.dpi)
 
 scaled = []
 for i in arr:
@@ -49,23 +67,30 @@ for i in arr:
         scaled.append(0)    
 
 fig3 = plt.figure(3)
-plt.title("Scaled data 16-bit PCM (small range)")
+title = name + " | Scaled data 16-bit PCM (small range)"
+plt.title(title)
 plt.ylabel("signal | int-16")
-plt.xlabel("number of data")
-plt.plot(scaled[int(length/2):int(length/2)+100])
-fig3.savefig("ScaledZoomed.png", dpi = fig3.dpi)
+plt.xlabel("time(sec)")
+plt.plot(time[int(length/2):int(length/2)+100], scaled[int(length/2):int(length/2)+100])
+title += "_ZOOMED.png"
+fig3.savefig(title, dpi = fig3.dpi)
 
 scaled = np.array(scaled)
-wavf.write('result2.wav', sampleRate, scaled.astype(np.int16))
+
+scaled = scaled[0:d]
+wavf.write('400Hz.wav', sampleRate, scaled.astype(np.int16))
 # Number of samples in normalized_tone
-N = sampleRate * 191#approxiame duration is 191 seconds
+N = sampleRate * duration#approxiame duration is 191 seconds
 yf = fft(scaled)
 xf = fftfreq(N, 1 / sampleRate)
-yf = yf[0:len(xf)]
-
+if len(yf) > len(xf):
+    yf = yf[0:len(xf)]
+else : xf = xf[0:len(yf)]
 fig4 = plt.figure(4)
-plt.title("FFT")
+title = name + " | FFT"
+plt.title(title)
 plt.ylabel("Magnitude")
-plt.xlabel("Frequency")
+plt.xlabel("Frequency (Hz)")
 plt.plot(xf, np.abs(yf))
-fig4.savefig("FFT.png", dpi = fig4.dpi)
+title+=".png"
+fig4.savefig(title, dpi = fig4.dpi)
